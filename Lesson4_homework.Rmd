@@ -1,0 +1,104 @@
+
+## Problem 1
+```{r}
+data("diamonds")
+ggplot(aes(y = price, x = x), data = subset(diamonds, !is.na(price) & !is.na(x) & x > 0)) + geom_point() 
+```
+
+## Problem 2
+```{r}
+data("diamonds")
+ggplot(aes(y = price, x = x), data = subset(diamonds, !is.na(price) & !is.na(x) & x > 0)) + geom_point() + geom_smooth()
+```
+
+## Problem 3
+```{r}
+cor.test(diamonds$price, diamonds$x, method = 'pearson')
+cor.test(diamonds$price, diamonds$y, method = 'pearson')
+cor.test(diamonds$price, diamonds$z, method = 'pearson')
+```
+
+## Problem 4
+```{r}
+ggplot(aes(y = price, x = depth), data = subset(diamonds, !is.na(price) & !is.na(depth))) + geom_point()
+```
+
+## Problem 5
+```{r}
+ggplot(data = diamonds, aes(x = depth, y = price)) + 
+  geom_point(alpha = 1/100) + scale_x_continuous(breaks = seq(min(diamonds$depth),max(diamonds$depth),2))
+```
+
+
+## Problem 6
+```{r}
+qplot(x = depth, data = diamonds) + scale_x_continuous(breaks = seq(50,70,2))
+```
+
+## Problem 7
+```{r}
+cor.test(diamonds$depth, diamonds$price, method = 'pearson')
+```
+
+## Problem 8
+```{r}
+ggplot(aes(y = price, x = carat), data = diamonds) + geom_point(alpha = 1/50) + xlim(0,quantile(diamonds$carat,0.99)) + ylim(0, quantile(diamonds$price, 0.99))
+```
+
+
+## Problem 9 
+```{r}
+diamonds$volume <- with(diamonds, x*y*z)
+ggplot(aes(y = price, x = volume), data = subset(diamonds,volume <= 1000)) + geom_point(alpha = 1/20)
+```
+
+## Problem 11
+```{r}
+new_data <- subset(diamonds, volume != 0 & volume < 800)
+cor.test(new_data$price, new_data$volume, method = 'pearson')
+```
+
+## Problem 12
+```{r}
+new_data <- subset(diamonds, volume != 0 & volume < 800)
+ggplot(aes(y = price, x = volume),data = new_data) + geom_point(alpha = 1/50)+geom_smooth(method='lm')
+```
+
+
+
+## Problem 13
+```{r}
+library(dplyr)
+group_clarity <- group_by(diamonds,clarity)
+diamondsByClarity <- summarise(group_clarity,
+                             mean_price = mean(price),
+                             median_price = median(price),
+                             min_price = min(price),
+                             max_price = max(price),
+                             n = n())
+
+diamondsByClarity <- arrange(diamondsByClarity,clarity)
+```
+
+
+## Problem 14
+```{r}
+data(diamonds)
+library(dplyr)
+
+diamonds_by_clarity <- group_by(diamonds, clarity)
+diamonds_mp_by_clarity <- summarise(diamonds_by_clarity, mean_price = mean(price))
+
+diamonds_by_color <- group_by(diamonds, color)
+diamonds_mp_by_color <- summarise(diamonds_by_color, mean_price = mean(price))
+
+library(gridExtra)
+p1 <- ggplot(aes(clarity, mean_price), data = diamonds_mp_by_clarity) +
+geom_bar(stat = 'identity')
+
+p2 <- ggplot(aes(color, mean_price), data = diamonds_mp_by_color) +
+geom_bar(stat = 'identity')
+grid.arrange(p1, p2)
+
+
+```

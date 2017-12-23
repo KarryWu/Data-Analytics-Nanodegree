@@ -1,0 +1,43 @@
+##Question 1
+```{r}
+qplot(x = price, data = diamonds, fill = cut) + facet_wrap( ~ color) + scale_x_log10()
+```
+
+##Question 2,3
+```{r}
+ggplot(aes(x = table, y = price), data = diamonds) + geom_point(aes(color = cut))  + scale_x_continuous(breaks = seq(50,70,1)) + coord_cartesian(xlim = c(50,70))
+```
+
+##Question 4
+```{r}
+diamonds$volume <- with(diamonds, x*y*z)
+ggplot(aes(x = volume, y = price), data = diamonds) + xlim(0, quantile(diamonds$volume, 0.99)) +geom_point(aes(color = clarity)) + scale_y_log10() 
+```
+
+##Question 5
+```{r}
+pf$prop_initiated <- with(pf, friendships_initiated/friend_count)
+```
+
+##Question 6
+```{r}
+ggplot(aes(x = tenure, y = prop_initiated),data = pf) + geom_line(aes(color = year_joined.bucket), stat = 'summary', fun.y = median)
+```
+
+
+##Question 7
+```{r}
+ggplot(aes(x = tenure, y = prop_initiated),data = pf) + geom_line(aes(color = year_joined.bucket), stat = 'summary', fun.y = median) + geom_smooth()
+```
+
+##Question 9
+```{r}
+group1 <- subset(pf,year_joined.bucket == '(2012,2014]')
+summary(group1)
+```
+
+##Question 9
+```{r}
+ggplot(aes(x = cut, y = price/carat), data = diamonds) + geom_jitter(aes(color = color)) + facet_wrap( ~ clarity)
+```
+

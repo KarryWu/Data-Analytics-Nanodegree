@@ -1,0 +1,614 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+KAIRUI WU
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Install and Load Packages
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(scales)
+library(lubridate)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loan <- read.csv("prosperLoanData.csv", header = 1, na.strings = c("","NA"))
+```
+
+# Introduction of the dataset
+
+Prosper is an American peer-to-peer lending platform. The site allows borrowers 
+to post a listing for a chosen loan amount and purpose. Investors are then given 
+the opportunity to invest in loans of their choice. Prosper collects data on 
+borrower details and provides risk ratings for investors.
+
+The dataset is from the P2P loan platform prosper.com. There are 113937 
+observations which contain the information of loans in 81 variables. 
+
+# Univariate Plots Section
+
+```{r echo=FALSE}
+# Summary and Structure of the dataset
+str(loan)
+summary(loan)
+```
+
+## Q1.How is the business development of Prosper?
+```{r echo=FALSE}
+# Count on Listing Loans with Years
+loan$Date_ymd <- as.Date(loan$ListingCreationDate, format = "%Y-%m-%d")
+
+ggplot(aes(x = Date_ymd), data = loan) + 
+        geom_histogram(aes(color = I('black'),fill = I('#F79420')),
+                       binwidth = 365) +
+        xlab('Years') + 
+        ylab('Count of Listed Loans') +
+        scale_x_date(labels = date_format("%Y"), date_breaks='1 year')
+```
+
+Based on the plot, the number of listed loans decreased sharply from 2008 to 
+2009. This may due to the depression of global economy, for which people don't 
+have extra money to do investments and even not believe in the market. After 
+2009, with the increasing of the popularity of P2P and the economy was becoming 
+stable, people were believing in the market and willing to lend their money to 
+others, for which the number of listed loans kept increasing year by year. The 
+business development of Prosper is on good trend and very stable these years.
+
+## Q2.How is the lender yield on Prosper?
+```{r echo=FALSE,warning=FALSE}
+# Count on Lender Yield
+ggplot(aes(x = LenderYield), data = loan) +
+        geom_histogram(binwidth = 0.05, 
+                       aes(color = I('black'),fill = I('#F79420'))) + 
+        xlab("Lender Yield") +
+        scale_x_continuous(lim = c(quantile(loan$LenderYield, 0.01),
+                                   quantile(loan$LenderYield, 0.99)),
+                           breaks = seq(0,0.4,0.025))
+```
+
+Based on the plot, loans had a lender yield from 0.125 to 0.175 were most 
+popular. With the increasing of the lender yiled after 0.175, the number of 
+listed loans decreases.
+
+## Q3.What is the distribution of loan purposes on prosper?
+```{r echo=FALSE}
+# Count on the Category of Loans
+loan$ListingCategoryLabel <- factor(loan$ListingCategory, 
+                                   labels=c("Not Available", 
+                                            "Debt Consolidation", 
+                                            "Home Improvement", "Business", 
+                                            "Personal loan", "Student Use", 
+                                            "Auto", "Other", "Baby & Adoption", 
+                                            "Boat", "Cosmetic Procedures", 
+                                            "Engagement Ring", "Green Loans", 
+                                            "Household Expenses", 
+                                            "Large Purchases", 
+                                            "Medical/Dental", "Motorcycle", 
+                                            "RV", "Taxes", "Vacation", 
+                                            "Wedding Loans"))
+
+ggplot(aes(x = ListingCategoryLabel), 
+       data = subset(loan, ListingCategoryLabel != 'Not Available')) + 
+        geom_bar(aes(color = I('black'),fill = I('#F79420'))) + 
+        xlab("Loan Purpose") +
+        theme(axis.text.x = element_text(angle = 90)) 
+```
+
+The loan with a purpose of debt consolidation is significantly more than others.
+This means Prosper is not the first choice for most people to get a loan. 
+Getting loans from Prosper is for paying for other loans for most people.
+
+## Q4.What is the distribution of loan amounts on Prosper?
+```{r echo=FALSE}
+# Count on Loan Amounts
+ggplot(aes(x = LoanOriginalAmount), data = loan) + 
+        geom_histogram(binwidth = 2000,
+                       aes(color = I('black'), fill = I('#F79420'))) +
+        xlab("Original Loan Amount") +
+        scale_x_continuous(breaks = seq(1000,36000,2000))
+
+summary(loan$LoanOriginalAmount)
+```
+
+Based on the plot, the loan with an amount from 1000 to 5000 is significantly 
+more than others. 35000 may be the allowable upper limit of the loan on Prosper.
+
+## Q5. What is the count on loan results of Prosper?
+For this question, we created the newStatus variable, of which the purpose was 
+to divide loans into two groups: good, bad. We regraded the status of "Completed"
+and "Current" as "good loan" but other status as "bad loan".
+```{r echo=FALSE}
+# Count of Loan Status
+loan$newStatus <- as.character(loan$LoanStatus)
+unique(loan$newStatus)
+loan$newStatus[grepl("Completed", loan$newStatus)] <- "Good"
+loan$newStatus[grepl("Defaulted", loan$newStatus)] <- "Bad"
+loan$newStatus[grepl("Chargedoff", loan$newStatus)] <- "Bad"
+loan$newStatus[grepl("Past Due", loan$newStatus)] <- "Bad"
+loan$newStatus[grepl("Current", loan$newStatus)] <- "Good"
+loan$newStatus[grepl("Cancelled", loan$newStatus)] <- "Bad"
+loan$newStatus[grepl("FinalPaymentInProgress", loan$newStatus)] <- "Good"
+unique(loan$newStatus)
+loan$newStatus <- as.factor(loan$newStatus)
+
+ggplot(aes(x = newStatus), data = loan) + 
+        geom_bar(color = I('black'), fill = I('#F79420')) +
+        xlab("Loan Status")
+```
+
+The number of good loans is three times more than the number of bad loans. Thus,
+the management and operation work of Prosper is excellent and the business is of
+low risks. Prosper is under good development.
+
+## Q5. What is the distribution of borrowers' employment status on Prosper?
+```{r echo=FALSE}
+# Count on Employment Status of Borrowers
+ggplot(aes(x = EmploymentStatus), 
+       data = subset(loan, !is.na(EmploymentStatus) & EmploymentStatus 
+                     != 'Not available')) + 
+        geom_bar(color = I('black'), fill = I('#F79420')) + 
+        theme(axis.text.x = element_text(angle = 90)) + 
+        ylim(0,75000) +
+        xlab("Employment Status")
+```
+
+The employed borrowers were significantly more than unemployed borrowers. 
+The full-time employed borrowers were more than part-time borrowers. This 
+indicates that the criterion of getting a loan from Prosper is strict and most
+unemployed people cannot get a loan from Prosper.
+
+## Q6. What is the distribution of employment durations of borrowers on Prosper?
+```{r echo=FALSE}
+# Count on Employment Duration
+ggplot(aes(x = EmploymentStatusDuration/12), 
+       data = subset(loan, !is.na(EmploymentStatusDuration))) + 
+        geom_histogram(aes(color = I('black'), fill = I('#F79420')), 
+                       binwidth = 0.5) + 
+        xlab("Employment Duration") +
+        scale_x_continuous(breaks = seq(0,60,2))
+```
+
+The longer the employment duration is, the less the number of loans is. This may 
+because people who have an entry-level job do not earn much money so that they 
+have to borrow the money to do other things or people who start their own 
+business in early stage of their career need some money to start. 
+
+## Q7. What is the distribution on borrowers' income ranges?
+```{r echo=FALSE}
+# Count on Income Range
+loan$IncomeRange <- factor(loan$IncomeRange, levels = c("Not employed", 
+"$0", "$1-24,999","$25,000-49,999","$50,000-74,999","$75,000-99,999",
+"$100,000+"))
+
+ggplot(aes(x = IncomeRange), 
+       data = subset(loan, !is.na(IncomeRange) & 
+                             IncomeRange != 'Not displayed' & 
+                             IncomeRange != '$0')) + 
+        geom_bar(aes(color = I('black'), fill = I('#F79420'))) + 
+        xlab("IncomeRange") 
+```
+
+Based on the plot, borrowers who had an income range frome 25000 to 75000 were 
+more than others. Besides, an annual income above 25000 dollors might be a good 
+support to get loans from Prosper. Not being employed and having an annual 
+income less than 25000 dollors would improve the difficulty to get loans.
+
+## Q8. What is the distribution of borrowers' debt to income ratio on Prosper?
+```{r echo=FALSE, warning=FALSE}
+# Count on Debt to Income Ratio
+ggplot(aes(x = DebtToIncomeRatio), data = loan) + 
+        geom_histogram(binwidth = 0.05, 
+                       aes(color = I('black'), fill = I('#F79420'))) +
+        xlab("Debt to Income Ratio") +
+        scale_x_continuous(lim = c(0,1), breaks = seq(0.025,1,0.05)) +
+        theme(axis.text.x = element_text(angle = 90))
+```
+
+Based on the plot, the debt to income ratio from 0.175 to 0.225 counts most. 
+With this indicator increasing, the count decreases. 
+
+# Bivariate Plots Section
+## Q9. Is there a change of the lender yield with years on Prosper?
+```{r echo=FALSE}
+# Change of the Lender Yield with Time
+loan$Date_year <- year(loan$Date_ymd)
+Year_groups <- group_by(loan, Date_year)
+loan.gby <- summarise(Year_groups,
+                      Lender_Yield_Median = median(LenderYield))
+loan.gby <- arrange(loan.gby, Date_year)
+ggplot(aes(x = Date_year, y = Lender_Yield_Median), 
+       data = subset(loan.gby, !is.na(Date_year) & 
+                             !is.na(Lender_Yield_Median))) +
+        geom_line() + 
+        scale_x_continuous(breaks = seq(2005,2014,1))
+```
+
+In 2011, the lender yield was at the peak. After that year, it kept decreasing. 
+The reason may be that P2P loan became increasingly popular these years, for 
+which more and more lenders wanted to borrow their money to others through P2P 
+platforms. Since the market became more competitive, lenders decreased their 
+yields to ensure that their money could be successfully borrowed. The economy 
+depression in 2008 also influenced the lender yield.
+
+## Q10. Is there a change of the loan amount with years on Prosper?
+```{r echo=FALSE}
+# Change of the Loan Amount with Time
+loan$Date_year <- year(loan$Date_ymd)
+Year_groups <- group_by(loan, Date_year)
+loan.gby <- summarise(Year_groups,
+                      Loan_Amount_Median = median(LoanOriginalAmount))
+loan.gby <- arrange(loan.gby, Date_year)
+ggplot(aes(x = Date_year, y = Loan_Amount_Median), 
+       data = subset(loan.gby, !is.na(Date_year) & 
+                             !is.na(Loan_Amount_Median))) +
+        geom_line() + 
+        scale_x_continuous(breaks = seq(2005,2014,1))
+```
+
+With the increasing popularity of P2P loans and the increasingly strict policy 
+and supervision on P2P loans, people were increasingly believing in this kind of 
+loans, for which more investors lended money on Prosper. This is the reason why 
+the loan amount kept increasing these years.
+
+## Q11. Is there a change of the borrower's credit score with years on Prosper?
+```{r echo=FALSE}
+# Change of the credit score with Time
+ggplot(aes(x = Date_year, y = CreditScoreRangeLower), 
+       data = subset(loan, !is.na(Date_year) & !is.na(CreditScoreRangeLower) & 
+                             !is.na(EmploymentStatus))) +
+        geom_line(stat = "summary", fun.y = mean) + 
+        scale_x_continuous(breaks = seq(2003,2014,1))
+```
+
+Based on the plot, from 2009, there seemed to be a new criterion for borrowers'
+credit scores. With the increasing popularity of P2P loans, more and more people 
+who did not have a high credit score started to try to apply loans from prosper,
+for which the average credit score of borrowers after 2009 slightly decreased.
+
+## Q12. Is there a change of the number of loans of different results with years?
+```{r echo=FALSE, ,warning=FALSE}
+# Change of the count of loans of different status with Time
+loan$Date_year <- year(loan$Date_ymd)
+Year_LoanStatus_groups <- group_by(loan, Date_year, newStatus)
+loan.gby_ls <- summarise(Year_LoanStatus_groups,
+                      n = n())
+loan.gby_ls <- arrange(loan.gby_ls, Date_year, newStatus)
+
+ggplot(aes(x = Date_year, y = n), data = subset(loan.gby_ls, 
+                                                !is.na(Date_year) & 
+                                                        !is.na(n))) +
+        geom_line(aes(color = newStatus)) + 
+        scale_x_continuous(lim = c(2006,2013),breaks = seq(2006,2013,1)) +
+        ylab("Count_on_Loans")
+```
+
+The dataset doesn't contain the whole data of the year 2005 and 2014, so I 
+removed these two when doing the research on the count on the loan status. Based 
+on the plot, from 2009 to 2013, the count of 'good loan' increased sharply 
+whereas the count of 'bad loan' kept almost the same. This means the market 
+environment is pretty good these years.
+
+## Q13. What is the differences of the percentage of 'good loans' with various employment status?
+```{r echo=FALSE}
+# Percentage of Loans of Different Results on Total Counts with Various 
+# Employment Status
+Employment_LoanStatus_groups <- group_by(loan, EmploymentStatus, newStatus)
+loan.gbep_ls <- summarise(Employment_LoanStatus_groups,
+                      n = n())
+Employment_groups <- group_by(loan, EmploymentStatus)
+loan.gbep <- summarise(Employment_groups,
+                      totall_count = n())
+
+loan.gbep_ls <- left_join(loan.gbep_ls, loan.gbep,by="EmploymentStatus") 
+loan.gbep_ls <- arrange(loan.gbep_ls, EmploymentStatus, newStatus)
+
+ggplot(aes(x = EmploymentStatus, y = n/totall_count), 
+       data = subset(loan.gbep_ls, !is.na(EmploymentStatus) & 
+                             !is.na(n) & !is.na(totall_count) &
+                        EmploymentStatus != 'Not available')) +
+        geom_point(aes(color = newStatus)) + ylab("Percentage of Count")
+```
+
+From the plot, the percentage of good loans for employed borrowers is higher 
+than unemployed. But, it is surprising that the percentage of good loans for 
+full-time borrower is lower than that for part-time borrower. Also, 
+self-employed borrowers performed better than full-time and part-time borrowers. 
+Besides, the retired borrowers performed worst.
+
+## Q14. What is the differences of the percentage of 'good loans' with various income range
+```{r echo=FALSE}
+# Percentage of Loans of Different Results on Total Counts with Various 
+# income range
+Income_LoanStatus_groups <- group_by(loan, IncomeRange, newStatus)
+loan.gbir_ls <- summarise(Income_LoanStatus_groups,
+                      n = n())
+Income_groups <- group_by(loan, IncomeRange)
+loan.gbir <- summarise(Income_groups,
+                      totall_count = n())
+
+loan.gbir_ls <- left_join(loan.gbir_ls, loan.gbir,by="IncomeRange") 
+loan.gbir_ls <- arrange(loan.gbir_ls, IncomeRange, newStatus)
+
+ggplot(aes(x = IncomeRange, y = n/totall_count), 
+       data = subset(loan.gbir_ls, !is.na(IncomeRange) & 
+                             !is.na(n) & !is.na(totall_count) &
+                        IncomeRange != 'Not employed')) +
+        geom_point(aes(color = newStatus)) + ylab("Percentage of Count")
+```
+
+Based on the plot, it is apparently that with the increasing on income ranges, 
+the percentage of good loans in total loans increases. The higher the borrower's
+income is, the lower the risk of the loan.
+
+## Q15. What is the difference on the employment duration for loans with different results
+```{r echo=FALSE, ,warning=FALSE}
+# Boxplot of Employment Duration
+Loan_Status_groups <- group_by(loan, newStatus)
+loan.gbls <- summarise(Loan_Status_groups,
+                      n = n())
+
+ggplot(aes(x = newStatus, y = EmploymentStatusDuration), 
+       data = subset(loan, !is.na(newStatus) & 
+                             !is.na(EmploymentStatusDuration))) +
+        geom_boxplot(aes(fill = newStatus)) + 
+        scale_y_continuous(lim = c(0,200)) + xlab("Loan Status")
+```
+
+The employment status duration of borrowers for good loans is slightly higher
+than which is for bad loans. 
+
+## Q16. What is the difference on the debt to income ratio for loans with different results
+```{r echo=FALSE, ,warning=FALSE}
+# Boxplot of Debt to Income Ratio
+Loan_Status_groups <- group_by(loan, newStatus)
+loan.gbls <- summarise(Loan_Status_groups,
+                      n = n())
+
+ggplot(aes(x = newStatus, y = DebtToIncomeRatio), 
+       data = subset(loan, !is.na(newStatus) & 
+                             !is.na(DebtToIncomeRatio))) +
+        geom_boxplot(aes(fill = newStatus)) + 
+        xlab("Loan Status") +
+        scale_y_continuous(lim= c(0,0.5))
+```
+
+Based on that plot, the debt to income ratio does not have influences on the 
+loan status. The mean value and quantile values are almost the same between two 
+loan status. This may be because the process of reviewing and the approval on 
+the loan focuses much on the debt to income ratio of the applicant of the loan, 
+for which the strict process prevent from admitting loans to people who have a 
+high debt to income ratio.
+
+## Q17. What is the relationship between loan amount and debt to income ratio?
+```{r echo=FALSE, ,warning=FALSE}
+# Scatter Plot on Loan Amount and Debt to Income Ratio
+ggplot(aes(x = DebtToIncomeRatio, y = LoanOriginalAmount), 
+       data = subset(loan, !is.na(DebtToIncomeRatio) & 
+                             !is.na(LoanOriginalAmount))) +
+        geom_jitter(alpha = 1/20, color = I('orange')) + 
+        scale_x_continuous(lim = c(0,1))
+```
+
+Based on the plot, large amount loans are only given to borrowers who have a 
+debt to income ratio lower than 0.5. The higher the debt to income ratio is, the 
+more difficult the person can get such a loan. The loan amount also has an 
+apparent level, such as 5000, 10000, 15000, ..., these amounts are popular in 
+loans on prosper.
+
+## Q18. What is the difference on BorrowersAPR with different Employment Status? 
+```{r echo=FALSE}
+# Boxplot of Borrowers APR with Different Employment Status
+ggplot(aes(x = EmploymentStatus, y = BorrowerAPR), 
+       data = subset(loan, !is.na(EmploymentStatus) & !is.na(BorrowerAPR) & 
+                             EmploymentStatus != 'Not available')) + 
+  geom_boxplot(aes(fill = EmploymentStatus)) + 
+  xlab("Employment Status") +
+  ylab("BorrowerAPR") +
+  stat_summary(fun.y = mean,geom = 'point',shape = 4) +
+  stat_summary(fun.y = mean,geom = 'smooth',aes(group = 1))
+```
+
+Based on the plot, full-time employed borrowers and part-time employed borrowers
+have the lowest borrower APR. On contrary, unemployed borrowers have the highest
+borrower APR. The reason may be that some loans are limited to employed 
+borrowers but for unemployed borrowers, there are limited number of loans which 
+have high rates that they can apply.
+
+## Q19. What is the difference on Lender Yield with different Prosper Ratings? 
+```{r echo=FALSE}
+# Boxplot of Lender Yields on Prosper Ratings
+loan$ProsperRating..Alpha.<-
+  ordered(loan$ProsperRating..Alpha.,levels = c("HR","E","D","C","B","A","AA")) 
+ggplot(aes(x = ProsperRating..Alpha., y = LenderYield), 
+       data = subset(loan, !is.na(ProsperRating..Alpha.) & 
+                             !is.na(LenderYield))) + 
+        geom_boxplot(aes(fill = ProsperRating..Alpha.)) +
+        xlab("Prosper Rating") + 
+        ylab("Lender Yield") +
+        stat_summary(fun.y = mean,geom = 'point',shape = 4) +
+        stat_summary(fun.y = mean,geom = 'smooth',aes(group = 1))
+
+```
+
+Based on the plot, with the increasing of borrowers' prosper rating, the lender
+yield decreases.
+
+# Multivariate Plots Section
+## Q20. What is the relationships among BorrowerAPR, LoanAmount and Prosper Rating? 
+```{r echo=FALSE}
+# Scatter Plot of Borrowers APR with Loan Amount and Prosper Rating
+ggplot(aes(x = LoanOriginalAmount, y = BorrowerAPR), 
+       data = subset(loan, !is.na(LoanOriginalAmount) & !is.na(BorrowerAPR) & 
+                                 !is.na(ProsperRating..Alpha.))) +
+                geom_point(aes(color = ProsperRating..Alpha.)) +
+                scale_color_brewer(type = 'seq', 
+                                   guide = guide_legend(title = 'Prosper Rating',
+                                                        reverse = TRUE,
+                                                        override.aes = list(
+                                                                alpha = 1, 
+                                                                size = 2)))
+```
+
+Based on the plot, with the increasing of loan amounts, the borrower APR 
+decreases. Besides, the higher the prosper rating is, the lower the APR is. 
+
+## Q21. What is the relationship between debt to income ratio with prosper score in different groups of loan? 
+```{r echo=FALSE}
+# Plot Line on Debt to Income Ratio with Different Prosper Score
+ggplot(aes(x = ProsperScore, y = DebtToIncomeRatio), 
+       data = subset(loan, !is.na(DebtToIncomeRatio) & !is.na(ProsperScore) & 
+                             !is.na(newStatus))) +
+        geom_line(stat = 'summary', fun.y = mean, alpha = 1, 
+                  aes(color = newStatus))
+
+```
+
+Based on the plot, when the prosper score is low, the debt to income ratio is a
+significant indicator to determine the risk of a loan. However, when the prosper
+score is high, the debt to income ratio is not so important on the risk of a 
+loan.
+
+## Q22. What is the relationship between borrowers APR and debt to income ratio in different groups of employment status? 
+```{r echo=FALSE, ,warning=FALSE}
+# Scatter Plot of Borrower APR on Debt to Income Ratio
+ggplot(aes(x = DebtToIncomeRatio, y = BorrowerAPR), 
+       data = subset(loan, !is.na(BorrowerAPR) & !is.na(DebtToIncomeRatio) & 
+                             !is.na(EmploymentStatus) & 
+                             EmploymentStatus != 'Not available')) +
+        geom_point(stat = "summary", fun.y = median, 
+                   aes(color = EmploymentStatus)) + 
+        scale_x_continuous(lim = c(0,1)) + 
+        facet_wrap(~ EmploymentStatus) + geom_smooth(method = 'lm')
+```
+
+Based on the plot, the borrower APR has a positive linear relation with the debt
+to income ratio for employed borrowers, especially for full-time employed 
+borrowers. For unemployed borrowers, the relation is not apparent.
+
+## Q23. What is the relationship between borrowers APR and employment duration in different groups of loan? 
+```{r echo=FALSE}
+# Scatter Plot of Borrowers APR on Employment Duration
+ggplot(aes(x = EmploymentStatusDuration, y = BorrowerAPR), 
+       data = subset(loan, !is.na(BorrowerAPR) & 
+                             !is.na(EmploymentStatusDuration) & 
+                             !is.na(newStatus))) +
+        geom_point(stat = "summary", fun.y = median, aes(color = newStatus)) 
+
+```
+
+Based on the plot, when the employment duration is short, the borrower APR is 
+significant on the loan risk. People have a short employment duration are not
+stable and have less revenues. Therefore, when facing a high APR, these type of
+borrowers probably lose the ability to pay the loan due to unemployments and low
+revenues. However, for people who have a long employment duration, their 
+salaries are always higher and they are more stable, for which APR becomes less 
+important to the risk of the loan. 
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(aes(x = EmploymentStatus, y = BorrowerAPR), 
+       data = subset(loan, !is.na(EmploymentStatus) & !is.na(BorrowerAPR) & 
+                             EmploymentStatus != 'Not available')) + 
+  geom_boxplot(aes(fill = EmploymentStatus)) + 
+  xlab("Employment Status") +
+  ylab("BorrowerAPR") +
+  stat_summary(fun.y = mean,geom = 'point',shape = 4) +
+  stat_summary(fun.y = mean,geom = 'smooth',aes(group = 1)) +
+  labs(title="Borrowers APR on Employment Status Groups") +
+        theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Description One
+Based on the plot, full-time employed borrowers and part-time employed borrowers
+have the lowest borrower APR. On contrary, unemployed borrowers have the highest
+borrower APR. The reason may be that some loans are limited to employed 
+borrowers but for unemployed borrowers, there are limited number of loans which 
+have high rates that they can apply.
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+Employment_LoanStatus_groups <- group_by(loan, EmploymentStatus, newStatus)
+loan.gbep_ls <- summarise(Employment_LoanStatus_groups,
+                      n = n())
+Employment_groups <- group_by(loan, EmploymentStatus)
+loan.gbep <- summarise(Employment_groups,
+                      totall_count = n())
+
+loan.gbep_ls <- left_join(loan.gbep_ls, loan.gbep,by="EmploymentStatus") 
+loan.gbep_ls <- arrange(loan.gbep_ls, EmploymentStatus, newStatus)
+
+ggplot(aes(x = EmploymentStatus, y = n/totall_count), 
+       data = subset(loan.gbep_ls, !is.na(EmploymentStatus) & 
+                             !is.na(n) & !is.na(totall_count) &
+                        EmploymentStatus != 'Not available')) +
+        geom_point(aes(color = newStatus)) + ylab("Percentage of Count") +
+        scale_color_discrete(name="Loan Status") + 
+        scale_y_continuous(labels = percent, breaks = seq(0,1,0.05)) +
+        labs(title="Percentage of Loans with Different Status on Employment 
+             Status Group") +
+        theme(plot.title = element_text(hjust = 0.4))
+```
+
+### Description Two
+From the plot, the percentage of good loans for employed borrowers is higher 
+than unemployed. But, it is surprising that the percentage of good loans for 
+full-time borrower is lower than that for part-time borrower. Also, 
+self-employed borrowers performed better than full-time and part-time borrowers. 
+Besides, the retired borrowers performed worst.
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(aes(x = EmploymentStatusDuration, y = BorrowerAPR), 
+       data = subset(loan, !is.na(BorrowerAPR) & 
+                             !is.na(EmploymentStatusDuration) & 
+                             !is.na(newStatus))) +
+        geom_point(stat = "summary", fun.y = median, aes(color = newStatus),
+                   alpha = 1/2) +
+        scale_color_discrete(name="Loan Status") +
+        scale_x_continuous(breaks = seq(0,800,50)) +
+        scale_y_continuous(breaks = seq(0,0.5,0.05)) +
+        xlab("Employment Status Duration (Unit:Days)") +
+        ylab("Borrowers APR") +
+        labs(title = "The Ralationship Between Borrowers APR and Employment 
+             Duration") +
+        theme(plot.title = element_text(hjust = 0.4))
+```
+
+### Description Three 
+Based on the plot, when the employment duration is short, the borrower APR is 
+significant on the loan risk. People have a short employment duration are not
+stable and have less revenues. Therefore, when facing a high APR, these type of
+borrowers probably lose the ability to pay the loan due to unemployments and low
+revenues. However, for people who have a long employment duration, their 
+salaries are always higher and they are more stable, for which APR becomes less 
+important to the risk of the loan. 
+
+------
+
+# Reflection
+In the analysis, the first difficulty I met was the lack of integraty of data
+with time series. I solved it by limiting the time period. The second one was 
+the complexity of variables. Some categorical variables have 8 - 10 labels. To 
+solve this point, I created several new variables to re-categorize the values to
+make the analysis easy. The third one was I was lack of the knowledge of finance,
+for which it was not easy to understand some variables in this dataset. I just 
+tried my best to get a good understanding on variables and ignored the variables
+which were not easy to understand.
+
+For future work, there are some point that can be further explored. Firstly, the 
+loan status was transfferd to a simple representation in my research. Instead of
+just two labels (good, bad) in this variable, we can use the original loan 
+status variable which is more complex to do in-depth research. Besides, more 
+features can be considerred in the research in future, for which we may find
+more patterns and more relationships between variables. In addition, predictive
+data analytics method can be applied on the research.
+
